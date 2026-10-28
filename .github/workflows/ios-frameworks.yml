@@ -1,0 +1,53 @@
+name: iOS Shared Frameworks
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios-frameworks:
+    name: Build KMP frameworks
+    runs-on: macos-15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Set up Android SDK for shared Android variants
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android API 37
+        run: sdkmanager --install "platforms;android-37"
+
+      - name: Check Xcode
+        run: |
+          xcode-select -p
+          xcodebuild -version
+
+      - name: Build iOS device and simulator frameworks
+        run: >-
+          ./gradlew --no-daemon
+          :domain:linkReleaseFrameworkIosArm64
+          :domain:linkReleaseFrameworkIosSimulatorArm64
+          :metadata:linkReleaseFrameworkIosArm64
+          :metadata:linkReleaseFrameworkIosSimulatorArm64
+
+      - name: Upload KMP framework artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: max-studio-ios-shared-frameworks
+          if-no-files-found: error
+          path: |
+            domain/build/bin/iosArm64/releaseFramework/MaxStudioDomain.framework
+            domain/build/bin/iosSimulatorArm64/releaseFramework/MaxStudioDomain.framework
+            metadata/build/bin/iosArm64/releaseFramework/MaxStudioMetadata.framework
+            metadata/build/bin/iosSimulatorArm64/releaseFramework/MaxStudioMetadata.framework
